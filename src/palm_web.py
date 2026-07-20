@@ -161,6 +161,8 @@ body{{font-family:Arial,sans-serif;max-width:980px;margin:24px auto;padding:0 14
 table{{border-collapse:collapse;width:100%}}th,td{{border:1px solid #bbb;padding:7px;text-align:left}}
 fieldset{{margin:14px 0;padding:12px}}input,select,button{{font-size:1em;padding:5px;margin:3px}}
 .ok{{background:#e8f6e8;padding:8px}}.warn{{background:#fff3cd;padding:8px}}.err{{background:#f8d7da;padding:8px}}
+.dropzone{{display:block;border:2px dashed #888;border-radius:6px;padding:24px;text-align:center;cursor:pointer;background:#fafafa}}
+.dropzone.dragover{{border-color:#1769aa;background:#eaf4ff}}.selected-files{{margin:8px 0;color:#444}}
 pre{{white-space:pre-wrap;background:#eee;padding:10px}}nav a{{margin-right:14px}}
 </style></head><body><nav><a href="/">Palm files</a><a href="/admin">Administration</a></nav>
 <h1>{esc(title)}</h1>{body}</body></html>"""
@@ -199,6 +201,7 @@ def create_app():
     load_jobs()
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = int(config.get("max_upload_bytes", 32 * 1024 * 1024))
+    max_upload_files = int(config.get("max_upload_files", 50))
 
     admin_networks = [ipaddress.ip_network(value) for value in config["admin_networks"]]
 
@@ -339,8 +342,11 @@ def create_app():
 <form method="post" action="/admin/bluetooth/uart-reset" onsubmit="return confirm('Perform the deeper Bluetooth UART reset? Active Palm sessions will disconnect.')">{csrf()}
 <input type="hidden" name="confirmation" value="RESET"><button type="submit">Reset Bluetooth UART</button>
 Use when the controller shows powered no, HCI DOWN, or hardware timeout errors.</form></fieldset>
-<fieldset><legend>Upload Palm file</legend><form method="post" action="/admin/upload" enctype="multipart/form-data">{csrf()}
-<input type="file" name="file" accept=".prc,.pdb" required><button type="submit">Upload</button></form></fieldset>
+<fieldset><legend>Upload Palm files</legend><form method="post" action="/admin/upload" enctype="multipart/form-data" id="upload-form">{csrf()}
+<label class="dropzone" id="upload-dropzone" for="upload-files"><b>Drop .prc and .pdb files here</b><br>or click to select files</label>
+<input type="file" id="upload-files" name="files" accept=".prc,.pdb" multiple required>
+<div class="selected-files" id="selected-files">No files selected</div>
+<button type="submit">Upload selected files</button> Up to {max_upload_files} files per batch.</form></fieldset>
 <h2>Managed files</h2><table><tr><th>File</th><th>Size</th><th>Action</th></tr>{file_rows}</table>
 <fieldset><legend>Send by Bluetooth</legend><p class="warn">The Palm must be awake and discoverable. Sending disconnects its LAP session.</p>
 <form method="post" action="/admin/send">{csrf()}<label>Device <select name="mac" required>{device_options}</select></label>
@@ -353,29 +359,74 @@ Use when the controller shows powered no, HCI DOWN, or hardware timeout errors.<
 <label>Device <select name="mac" required>{device_options}</select></label><label>Peer IP <input name="ip" value="{esc(suggested_ip)}" required></label>
 <label>Name <input name="name" maxlength="80"></label><button type="submit">Authorize</button></form></fieldset>
 <h2>Paired devices</h2><table><tr><th>Name</th><th>MAC</th><th>Connected</th><th>LAP address</th></tr>{device_rows}</table>
-<h2>Recent send jobs</h2><table><tr><th>Job</th><th>File</th><th>Status</th></tr>{job_rows}</table>"""
+<h2>Recent send jobs</h2><table><tr><th>Job</th><th>File</th><th>Status</th></tr>{job_rows}</table>
+<script>
+(function () {{
+  var input = document.getElementById('upload-files');
+  var zone = document.getElementById('upload-dropzone');
+  var selected = document.getElementById('selected-files');
+  function showFiles() {{
+    var names = [];
+    for (var i = 0; i < input.files.length; i++) names.push(input.files[i].name);
+    selected.textContent = names.length ? names.length + ' selected: ' + names.join(', ') : 'No files selected';
+  }}
+  input.addEventListener('change', showFiles);
+  zone.addEventListener('dragover', function (event) {{ event.preventDefault(); zone.classList.add('dragover'); }});
+  zone.addEventListener('dragleave', function () {{ zone.classList.remove('dragover'); }});
+  zone.addEventListener('drop', function (event) {{
+    event.preventDefault();
+    zone.classList.remove('dragover');
+    input.files = event.dataTransfer.files;
+    showFiles();
+  }});
+}}());
+</script>"""
         return page(f"{gateway_name} administration", body)
 
     @app.post("/admin/upload")
     @admin_required
     def upload():
         require_csrf()
-        uploaded = request.files.get("file")
-        if not uploaded or not uploaded.filename:
+        uploads = [item for item in request.files.getlist("files") if item.filename]
+        if not uploads:
+            # Preserve compatibility with the original single-file form/API.
+            uploads = [item for item in request.files.getlist("file") if item.filename]
+        if not uploads:
             abort(400, "missing file")
-        name = secure_filename(uploaded.filename)
-        if not name or Path(name).suffix.lower() not in ALLOWED_SUFFIXES:
-            abort(400, "only .prc and .pdb files are accepted")
-        temporary = STORE / ("." + uuid.uuid4().hex + ".upload")
-        uploaded.save(temporary)
+        if len(uploads) > max_upload_files:
+            abort(400, f"at most {max_upload_files} files may be uploaded at once")
+
+        staged = []
+        seen_names = set()
         try:
-            if temporary.stat().st_size < 78 or palm_header(temporary) is None:
-                abort(400, "file is too small to be a Palm database")
-            os.chmod(temporary, 0o644)
-            temporary.replace(STORE / name)
+            for uploaded in uploads:
+                name = secure_filename(uploaded.filename)
+                if not name or Path(name).suffix.lower() not in ALLOWED_SUFFIXES:
+                    abort(400, "only .prc and .pdb files are accepted")
+                name_key = name.casefold()
+                if name_key in seen_names:
+                    abort(400, f"duplicate filename in upload: {name}")
+                seen_names.add(name_key)
+                temporary = STORE / ("." + uuid.uuid4().hex + ".upload")
+                uploaded.save(temporary)
+                staged.append((temporary, name))
+
+            # Validate the complete batch before making any file visible.
+            for temporary, name in staged:
+                if temporary.stat().st_size < 78 or palm_header(temporary) is None:
+                    abort(400, f"{name} is too small to be a Palm database")
+                os.chmod(temporary, 0o644)
+
+            for temporary, name in staged:
+                temporary.replace(STORE / name)
         finally:
-            temporary.unlink(missing_ok=True)
-        return redirect(url_for("admin", message=f"Uploaded {name}"))
+            for temporary, _name in staged:
+                temporary.unlink(missing_ok=True)
+        if len(staged) == 1:
+            message = f"Uploaded {staged[0][1]}"
+        else:
+            message = f"Uploaded {len(staged)} files"
+        return redirect(url_for("admin", message=message))
 
     @app.post("/admin/send")
     @admin_required

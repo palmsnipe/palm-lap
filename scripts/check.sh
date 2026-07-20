@@ -4,6 +4,7 @@ set -eu
 REPO_ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 
 python3 -m compileall -q "$REPO_ROOT/src"
+python3 -m unittest discover -s "$REPO_ROOT/tests" -p 'test_*.py'
 for script in "$REPO_ROOT"/scripts/*.sh; do
     sh -n "$script"
 done

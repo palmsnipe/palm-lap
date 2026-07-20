@@ -25,9 +25,11 @@ while retaining Palm HTTP on `10.77.0.1`.
 
 ## File workflow
 
-1. Open `/admin` from the Mac and authenticate.
-2. Upload a `.prc` or `.pdb`. Uploads are limited to 32 MiB and stored in
-   `/var/lib/palm-web/files` with mode `0644`.
+1. Open `/admin` from the Mac.
+2. Select one or more `.prc`/`.pdb` files, or drag them onto the upload area.
+   The default limits are 50 files and 32 MiB for the complete request. The
+   server stages and validates the whole batch before publishing any file, then
+   stores it in `/var/lib/palm-web/files` with mode `0644`.
 3. Either:
    - connect the Palm to `Palm LAP`, open `http://10.77.0.1:8080/`, and select the
      file; or

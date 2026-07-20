@@ -9,8 +9,8 @@ Bluetooth adapter into a Palm OS 5 LAN Access Profile gateway. It provides:
 - nftables forwarding and IPv4 NAT to a configurable LAN uplink;
 - a Palm-compatible DNS forwarder;
 - a legacy-PIN pairing window that is closed by default;
-- a LAN-only web interface for pairing, authorization, file uploads, PRC/PDB
-  downloads, OBEX sends, diagnostics, and Bluetooth recovery;
+- a LAN-only web interface for pairing, authorization, multi-file drag/drop
+  uploads, PRC/PDB downloads, OBEX sends, diagnostics, and Bluetooth recovery;
 - Raspberry Pi Zero 2 W UART recovery for the observed BCM HCI timeout.
 
 The implementation was physically validated with Palm OS 5 devices including

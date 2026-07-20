@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — 2026-07-19
+
+- Added multi-file `.prc`/`.pdb` uploads to the LAN administration interface.
+- Added a drag-and-drop upload area with a selected-file summary while keeping
+  the Palm-facing catalog free of JavaScript and compatible with old browsers.
+- Made the per-batch file-count limit configurable and added validation of every
+  staged file before publishing any member of the batch.
+
 ## 0.5.0 — 2026-07-19
 
 - Published the validated implementation as the private

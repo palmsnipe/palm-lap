@@ -165,6 +165,7 @@ print(json.dumps({
     "gateway_ip": sys.argv[2],
     "gateway_name": sys.argv[1],
     "max_upload_bytes": 32 * 1024 * 1024,
+    "max_upload_files": 50,
     "operator_user": sys.argv[3],
 }, indent=2, sort_keys=True))
 PY
