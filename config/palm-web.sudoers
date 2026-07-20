@@ -1,0 +1,2 @@
+# The dedicated web account may invoke only the validating Palm gateway helper.
+palmweb ALL=(root) NOPASSWD: /usr/local/sbin/palm-web-admin

@@ -1,0 +1,6 @@
+[Unit]
+Description=Close the temporary Palm LAP Bluetooth pairing window
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/palm-lap-pair close

@@ -1,0 +1,10 @@
+[Unit]
+Description=Automatically close Palm LAP Bluetooth pairing
+
+[Timer]
+OnActiveSec=10min
+AccuracySec=1s
+Unit=palm-lap-pairing-close.service
+
+[Install]
+WantedBy=timers.target

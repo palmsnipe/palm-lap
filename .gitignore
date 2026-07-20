@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.prc
+*.pdb
+*.zip
+*.log
+.DS_Store
+runtime/
+backups/
+captures/
+config/config.json
+config/web.json

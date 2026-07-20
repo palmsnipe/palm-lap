@@ -1,0 +1,28 @@
+# Palm LAP interfaces are named plap<last IPv4 octet> by palm-lapd.
+table inet palm_lap_filter {
+    chain input {
+        type filter hook input priority 10; policy accept;
+        iifname "plap*" ip saddr != @SUBNET@ counter drop comment "reject spoofed Palm source"
+        iifname "plap*" ip daddr @LOCAL_IP@ udp dport 53 counter accept comment "Palm DNS to local forwarder"
+        iifname "plap*" ip daddr @LOCAL_IP@ tcp dport 53 counter accept comment "Palm DNS TCP fallback"
+        iifname "plap*" ip daddr @LOCAL_IP@ tcp dport 8080 counter accept comment "Palm file catalog"
+        iifname "plap*" ip daddr @LOCAL_IP@ icmp type { echo-request, echo-reply, destination-unreachable, time-exceeded } counter accept comment "Palm gateway diagnostics"
+        iifname "plap*" counter drop comment "do not expose Pi services to Palm subnet"
+    }
+
+    chain forward {
+        type filter hook forward priority 10; policy accept;
+        iifname "plap*" ip saddr != @SUBNET@ counter drop comment "reject spoofed Palm source"
+        iifname "plap*" oifname "@UPLINK@" ip saddr @SUBNET@ counter accept comment "Palm to LAN and Internet"
+        iifname "plap*" counter drop comment "Palm cannot forward elsewhere"
+        oifname "plap*" ct state established,related counter accept comment "return traffic to Palm"
+        oifname "plap*" counter drop comment "no unsolicited traffic to Palm"
+    }
+}
+
+table ip palm_lap_nat {
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        ip saddr @SUBNET@ oifname "@UPLINK@" counter masquerade comment "Palm LAP IPv4 NAT"
+    }
+}

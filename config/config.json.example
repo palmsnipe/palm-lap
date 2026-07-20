@@ -1,0 +1,10 @@
+{
+  "devices": {},
+  "dns": [
+    "10.77.0.1"
+  ],
+  "gateway_name": "Palm LAP",
+  "local_ip": "10.77.0.1",
+  "rfcomm_channel": 4,
+  "subnet": "10.77.0.0/24"
+}

@@ -1,0 +1,16 @@
+[Unit]
+Description=Restore legacy Palm Bluetooth discovery hints
+Documentation=file:/usr/local/share/doc/palm-lap/ARCHITECTURE.md
+After=bluetooth.service palm-lap.service
+Requires=bluetooth.service palm-lap.service
+
+[Service]
+Type=oneshot
+# BlueZ derives service-class bits after controller/profile initialization.
+# Reapply the withdrawn LAP Networking hint once the boot-time radio settles.
+ExecStartPre=/bin/sleep 15
+ExecStart=/usr/local/sbin/palm-lap-controller-compat
+TimeoutStartSec=35
+
+[Install]
+WantedBy=multi-user.target

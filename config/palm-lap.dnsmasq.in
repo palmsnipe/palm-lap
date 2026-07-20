@@ -1,0 +1,10 @@
+# DNS-only forwarder for Palm LAP peers. No DHCP service is provided.
+port=53
+bind-dynamic
+interface=lo
+interface=plap*
+no-dhcp-interface=*
+no-resolv
+server=@UPSTREAM_DNS@
+cache-size=300
+domain-needed

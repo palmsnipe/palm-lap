@@ -1,0 +1,37 @@
+[Unit]
+Description=Palm OS Bluetooth LAN Access Profile gateway
+Documentation=file:/usr/local/share/doc/palm-lap/OPERATIONS.md
+Requires=bluetooth.service
+After=bluetooth.service nftables.service
+Wants=nftables.service
+PartOf=bluetooth.service
+
+[Service]
+Type=simple
+ExecStartPre=/usr/local/libexec/palm-lapd --check
+ExecStart=/usr/local/libexec/palm-lapd
+Restart=on-failure
+RestartSec=3s
+RuntimeDirectory=palm-lap
+RuntimeDirectoryMode=0700
+UMask=0077
+
+# The daemon is root because pppd must create and configure PPP interfaces.
+User=root
+Group=root
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ProtectKernelLogs=true
+ProtectClock=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_KILL
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+# Common server-side PPP options for Palm OS Bluetooth LAP.
+# The local:peer addresses, interface name, and DNS are supplied by palm-lapd.
+notty
+nodetach
+local
+nolock
+nocrtscts
+noauth
+noipv6
+asyncmap 0
+mtu 1500
+mru 1500
+lcp-echo-interval 30
+lcp-echo-failure 4
+debug

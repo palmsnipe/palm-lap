@@ -1,0 +1,33 @@
+[Unit]
+Description=Palm LAP file catalog and administration
+Documentation=file:/usr/local/share/doc/palm-lap/WEB-INTERFACE.md
+After=network-online.target bluetooth.service palm-lap.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=palmweb
+Group=palmweb
+WorkingDirectory=/usr/local/libexec
+ExecStart=/usr/bin/waitress-serve --listen=0.0.0.0:8080 --threads=6 --call palm_web:create_app
+Restart=on-failure
+RestartSec=3s
+UMask=0027
+
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/lib/palm-web /etc/palm-lap /run/palm-lap
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ProtectKernelLogs=true
+ProtectClock=true
+PrivateDevices=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK AF_BLUETOOTH
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

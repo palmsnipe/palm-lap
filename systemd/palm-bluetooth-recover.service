@@ -1,0 +1,10 @@
+[Unit]
+Description=Recover Palm LAP Bluetooth UART and service
+Documentation=file:/usr/local/share/doc/palm-lap/TROUBLESHOOTING.md
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 3
+ExecStart=/usr/local/sbin/palm-bluetooth-recover
+TimeoutStartSec=35
+Nice=-5
