@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0 — 2026-07-19
+
+- Published the validated implementation as the private
+  `palmsnipe/palm-lap` GitHub repository.
+- Reorganized runtime code, systemd units, configuration templates, scripts,
+  and documentation into a reusable installation source tree.
+- Removed real Palm/controller addresses, operator paths, device allowlists,
+  uploaded packages, captures, bonds, PIN state, jobs, and backups.
+- Made gateway name, operator account, admin network, uplink, upstream DNS,
+  Palm subnet, and local PPP address installation inputs.
+- Added backed-up first-install, preserve-configuration update, verification,
+  uninstall, repository hygiene, and GitHub Actions validation workflows.
+- Made the installer refuse to replace an existing allowlist unless the
+  operator supplies `--reconfigure` explicitly.
+
 ## 0.4.2 — 2026-07-19
 
 - Diagnosed Palm TX timeouts where BlueZ showed an ACL connection but never
