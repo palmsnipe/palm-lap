@@ -55,6 +55,12 @@ class UploadTests(unittest.TestCase):
         data["csrf"] = palm_web.csrf_token
         return self.client.post("/admin/upload", data=data, content_type="multipart/form-data")
 
+    def test_upload_input_does_not_filter_unknown_ios_file_types(self):
+        source = (REPO_ROOT / "src" / "palm_web.py").read_text(encoding="utf-8")
+
+        self.assertIn('id="upload-files" name="files" multiple required', source)
+        self.assertNotIn('accept=".prc,.pdb"', source)
+
     def test_uploads_multiple_files(self):
         response = self.post({"files": [
             (io.BytesIO(palm_database("One")), "One.prc"),

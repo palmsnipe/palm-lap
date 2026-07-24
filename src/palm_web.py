@@ -344,9 +344,10 @@ def create_app():
 Use when the controller shows powered no, HCI DOWN, or hardware timeout errors.</form></fieldset>
 <fieldset><legend>Upload Palm files</legend><form method="post" action="/admin/upload" enctype="multipart/form-data" id="upload-form">{csrf()}
 <label class="dropzone" id="upload-dropzone" for="upload-files"><b>Drop .prc and .pdb files here</b><br>or click to select files</label>
-<input type="file" id="upload-files" name="files" accept=".prc,.pdb" multiple required>
+<input type="file" id="upload-files" name="files" multiple required>
 <div class="selected-files" id="selected-files">No files selected</div>
-<button type="submit">Upload selected files</button> Up to {max_upload_files} files per batch.</form></fieldset>
+<button type="submit">Upload selected files</button> Up to {max_upload_files} files per batch.
+<small>The picker intentionally shows every file for iPhone/iPad compatibility; the server accepts only valid .prc and .pdb files.</small></form></fieldset>
 <h2>Managed files</h2><table><tr><th>File</th><th>Size</th><th>Action</th></tr>{file_rows}</table>
 <fieldset><legend>Send by Bluetooth</legend><p class="warn">The Palm must be awake and discoverable. Sending disconnects its LAP session.</p>
 <form method="post" action="/admin/send">{csrf()}<label>Device <select name="mac" required>{device_options}</select></label>

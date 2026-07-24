@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1 — 2026-07-24
+
+- Removed the browser-side file-extension filter that could prevent iOS Safari
+  from selecting unregistered `.prc` and `.pdb` file types.
+- Retained all server-side extension, filename, size, count, and Palm database
+  validation.
+
 ## 0.6.0 — 2026-07-19
 
 - Added multi-file `.prc`/`.pdb` uploads to the LAN administration interface.

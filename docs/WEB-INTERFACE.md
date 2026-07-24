@@ -30,6 +30,12 @@ while retaining Palm HTTP on `10.77.0.1`.
    The default limits are 50 files and 32 MiB for the complete request. The
    server stages and validates the whole batch before publishing any file, then
    stores it in `/var/lib/palm-web/files` with mode `0644`.
+
+On iPhone and iPad, use the native file picker and select the package from the
+Files app. The picker is intentionally not given an HTML `accept` filter because
+iOS may hide uncommon, unregistered Palm extensions such as `.prc` and `.pdb`.
+The server still enforces the extension, request limits, normalized filename,
+and Palm database header for every file.
 3. Either:
    - connect the Palm to `Palm LAP`, open `http://10.77.0.1:8080/`, and select the
      file; or
