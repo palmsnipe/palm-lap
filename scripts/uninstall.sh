@@ -36,7 +36,9 @@ rm -f \
     /etc/systemd/system/palm-bluetooth-recover.service \
     /etc/systemd/system/palm-lap-compat.service \
     /etc/systemd/user/palm-obex-inbox.service \
+    /etc/systemd/user/obex.service.d/palm-lap.conf \
     /etc/sudoers.d/palm-web \
+    /etc/sudoers.d/palm-obex \
     /etc/dnsmasq.d/palm-lap.conf \
     /etc/nftables.d/palm-lap.nft \
     /etc/ppp/peers/palm-lap \
@@ -49,7 +51,9 @@ rm -f \
     /usr/local/sbin/palm-web-admin \
     /usr/local/sbin/palm-bluetooth-recover \
     /usr/local/sbin/palm-lap-controller-compat \
+    /usr/local/sbin/palm-obex-compat \
     /usr/local/bin/palm-send-prc
+rmdir /etc/systemd/user/obex.service.d 2>/dev/null || true
 rm -rf /usr/local/share/doc/palm-lap
 
 if [ "$PURGE" -eq 1 ]; then

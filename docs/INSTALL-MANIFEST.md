@@ -38,6 +38,7 @@ Palm-facing DNS forwarder; its DHCP functions are disabled.
 /usr/local/bin/palm-send-prc
 /usr/local/libexec/palm_web.py
 /usr/local/libexec/palm-obex-inbox
+/usr/local/sbin/palm-obex-compat
 /usr/local/sbin/palm-web-admin
 /usr/local/sbin/palm-bluetooth-recover
 /usr/local/sbin/palm-lap-controller-compat
@@ -48,6 +49,8 @@ Palm-facing DNS forwarder; its DHCP functions are disabled.
 /etc/systemd/system/palm-bluetooth-recover.service
 /etc/systemd/system/palm-lap-compat.service
 /etc/systemd/user/palm-obex-inbox.service
+/etc/systemd/user/obex.service.d/palm-lap.conf
+/etc/sudoers.d/palm-obex
 /etc/sudoers.d/palm-web
 /etc/bluetooth/main.conf
 /etc/ppp/peers/palm-lap
@@ -105,7 +108,10 @@ policy but no credential or password hash.
 - Enabled and started the per-user `obex.service` for modern Bluetooth Object Push.
 - Installed and enabled the per-user `palm-obex-inbox.service`, with its
   `/usr/local/libexec/palm-obex-inbox` Agent1 receiver and separate
-  `operator:palmweb` setgid inbox at `/var/lib/palm-web/inbox`.
+  `operator:palmweb` setgid inbox at `/var/lib/palm-web/inbox`. The
+  `obex.service` drop-in roots BlueZ at that inbox, and the narrowly authorized
+  compatibility helper restores missing OPP advertisement after an `obexd`
+  restart.
 - Enabled and started `dnsmasq.service` as DNS-only forwarding on loopback and
   dynamic `plap*` interfaces; IPCP advertises `10.77.0.1` as DNS.
 - Created `palmweb`, enabled `palm-web.service`, and installed its single-command
@@ -155,6 +161,8 @@ sudo rm -f /etc/systemd/system/palm-web.service
 sudo rm -f /etc/systemd/system/palm-bluetooth-recover.service
 sudo rm -f /etc/systemd/system/palm-lap-compat.service
 sudo rm -f /etc/systemd/user/palm-obex-inbox.service
+sudo rm -f /etc/systemd/user/obex.service.d/palm-lap.conf
+sudo rm -f /etc/sudoers.d/palm-obex
 sudo rm -f /etc/sudoers.d/palm-web
 sudo rm -f /usr/local/libexec/palm-lapd
 sudo rm -f /usr/local/sbin/palm-lap-pair
@@ -164,6 +172,7 @@ sudo rm -f /usr/local/sbin/palm-bluetooth-recover
 sudo rm -f /usr/local/sbin/palm-lap-controller-compat
 sudo rm -f /usr/local/libexec/palm_web.py
 sudo rm -f /usr/local/libexec/palm-obex-inbox
+sudo rm -f /usr/local/sbin/palm-obex-compat
 sudo rm -f /usr/local/bin/palm-send-prc
 sudo rm -rf /etc/palm-lap
 sudo rm -f /etc/dnsmasq.d/palm-lap.conf

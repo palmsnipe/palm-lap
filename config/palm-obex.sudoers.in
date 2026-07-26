@@ -1,0 +1,2 @@
+# The configured operator may repair BlueZ's OBEX profile-registration race.
+@OPERATOR_USER@ ALL=(root) NOPASSWD: /usr/local/sbin/palm-obex-compat

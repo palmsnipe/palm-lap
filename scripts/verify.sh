@@ -39,6 +39,12 @@ runuser -u "$OPERATOR_USER" -- env \
     XDG_RUNTIME_DIR="/run/user/$OPERATOR_UID" \
     DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$OPERATOR_UID/bus" \
     systemctl --user is-active obex.service palm-obex-inbox.service
+runuser -u "$OPERATOR_USER" -- env \
+    XDG_RUNTIME_DIR="/run/user/$OPERATOR_UID" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$OPERATOR_UID/bus" \
+    systemctl --user show obex.service -p ExecStart --value |
+    grep -Fq -- '--root=/var/lib/palm-web/inbox'
+bluetoothctl show | grep -Fq '00001105-0000-1000-8000-00805f9b34fb'
 find /var/lib/palm-web/inbox -maxdepth 0 -user "$OPERATOR_USER" -group palmweb \
     -perm -2000 | grep -q /var/lib/palm-web/inbox
 echo "Inbox ownership and setgid mode verified"

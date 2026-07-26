@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+if [ "$#" -ne 0 ] || [ "$(id -u)" -ne 0 ]; then
+    echo "palm-obex-compat must run as root without arguments" >&2
+    exit 2
+fi
+
+has_object_push() {
+    bluetoothctl show 2>/dev/null |
+        grep -Fq '00001105-0000-1000-8000-00805f9b34fb'
+}
+
+# BlueZ 5.82 can miss the server profile when obexd starts after bluetoothd.
+# A bluetoothd restart makes the already-running obexd register OPP and FTP.
+sleep 1
+if has_object_push; then
+    exit 0
+fi
+
+systemctl restart bluetooth.service
+systemctl start palm-lap.service
+/usr/local/sbin/palm-lap-controller-compat
+
+if ! has_object_push; then
+    echo "OBEX Object Push was not advertised after Bluetooth recovery" >&2
+    exit 1
+fi

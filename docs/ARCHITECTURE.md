@@ -139,7 +139,9 @@ worker serializes transfers. See `WEB-INTERFACE.md` for the complete threat
 boundary and operations.
 
 Incoming Object Push uses the operator's current BlueZ `obexd` user service and
-the repository's `palm-obex-inbox` Agent1 implementation. On authorization, the
+the repository's `palm-obex-inbox` Agent1 implementation. The OBEX daemon is
+explicitly rooted at `/var/lib/palm-web/inbox`; its filesystem driver otherwise
+rejects an agent-selected path outside its configured root. On authorization, the
 agent reads `Transfer1.Session`, then uses `Session1.Destination` to identify the
 remote address. It accepts only devices whose system-bus `Device1` properties
 are paired and trusted. It chooses a collision-safe path in the dedicated inbox,

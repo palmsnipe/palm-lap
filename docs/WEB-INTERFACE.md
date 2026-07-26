@@ -67,6 +67,13 @@ paired and trusted. The default per-file limit is 64 MiB. Files are written to:
 /var/lib/palm-web/inbox/
 ```
 
+The `obex.service` drop-in sets this directory as BlueZ's OBEX root. BlueZ
+refuses even an agent-approved absolute path outside that root. The drop-in also
+runs the fixed, argument-free `palm-obex-compat` helper after startup. It
+restarts `bluetooth.service` only if BlueZ 5.82 failed to advertise Object Push
+after an `obexd` restart, then restores the LAP profile and legacy discovery
+hints.
+
 This inbox is deliberately separate from `/var/lib/palm-web/files/`. Received
 items do not appear in the Palm HTTP catalog and cannot be selected for an
 outbound Bluetooth send. The LAN-only administration page lists each completed
@@ -180,14 +187,17 @@ Files:
 /usr/local/libexec/palm-obex-inbox
 /usr/local/sbin/palm-web-admin
 /usr/local/sbin/palm-bluetooth-recover
+/usr/local/sbin/palm-obex-compat
 /etc/palm-lap/web.json
 /etc/systemd/system/palm-web.service
 /etc/systemd/system/palm-bluetooth-recover.service
 /etc/sudoers.d/palm-web
+/etc/sudoers.d/palm-obex
 /var/lib/palm-web/files/
 /var/lib/palm-web/inbox/
 /var/lib/palm-web/jobs.json
 /etc/systemd/user/palm-obex-inbox.service
+/etc/systemd/user/obex.service.d/palm-lap.conf
 ```
 
 Editable source is the cloned `palm-lap` repository. Installed runtime files
@@ -202,6 +212,11 @@ operator action.
 - **Bluetooth job says service record unavailable:** disconnect LAP, keep the
   Palm awake/discoverable, and retry. If the Zire refuses every channel, perform
   a soft reset as documented in `PRC-TRANSFER.md`.
+- **Palm says it cannot send to the gateway:** confirm `obex.service` was started
+  with `--root=/var/lib/palm-web/inbox`, verify the Object Push UUID with
+  `bluetoothctl show`, and inspect both `palm-obex-inbox.service` and `obexd`
+  journal entries. An `open(...): Operation not permitted` entry normally means
+  the OBEX root drop-in is missing.
 - **Downloaded PRC does not install:** confirm sufficient free Palm storage. A
   Palm commonly needs additional working space beyond the PRC's file size.
 - **Admin returns 404:** access it from the `192.168.1.0/24` LAN, not through

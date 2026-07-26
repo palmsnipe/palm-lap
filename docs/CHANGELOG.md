@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1 — 2026-07-25
+
+- Set BlueZ `obexd`'s root to the dedicated audited inbox. BlueZ rejects an
+  agent-selected path outside its root even when Unix permissions allow it.
+- Added a narrowly authorized compatibility helper that repairs BlueZ 5.82's
+  missed OPP/FTP profile registration after an `obexd` restart.
+
 ## 0.7.0 — 2026-07-25
 
 - Added a current BlueZ OBEX Agent receiver for incoming Bluetooth Object Push

@@ -30,6 +30,7 @@ install -o root -g root -m 0755 "$REPO_ROOT/src/palm-lap-device.py" /usr/local/s
 install -o root -g root -m 0755 "$REPO_ROOT/src/palm-web-admin.py" /usr/local/sbin/palm-web-admin
 install -o root -g root -m 0755 "$REPO_ROOT/src/palm-bluetooth-recover.py" /usr/local/sbin/palm-bluetooth-recover
 install -o root -g root -m 0755 "$REPO_ROOT/src/palm-lap-controller-compat.py" /usr/local/sbin/palm-lap-controller-compat
+install -o root -g root -m 0755 "$REPO_ROOT/src/palm-obex-compat" /usr/local/sbin/palm-obex-compat
 install -o root -g root -m 0755 "$REPO_ROOT/src/palm-send-prc.py" /usr/local/bin/palm-send-prc
 
 install -d -m 0755 /usr/local/share/doc/palm-lap
@@ -41,6 +42,14 @@ install -d -m 0755 /etc/systemd/user
 for unit in "$REPO_ROOT"/systemd-user/*; do
     install -o root -g root -m 0644 "$unit" "/etc/systemd/user/$(basename "$unit")"
 done
+install -d -m 0755 /etc/systemd/user/obex.service.d
+install -o root -g root -m 0644 "$REPO_ROOT/config/obex-palm-lap.conf" \
+    /etc/systemd/user/obex.service.d/palm-lap.conf
+sed "s|@OPERATOR_USER@|$OPERATOR_USER|g" \
+    "$REPO_ROOT/config/palm-obex.sudoers.in" > /etc/sudoers.d/palm-obex
+chown root:root /etc/sudoers.d/palm-obex
+chmod 0440 /etc/sudoers.d/palm-obex
+visudo -cf /etc/sudoers.d/palm-obex >/dev/null
 install -d -o "$OPERATOR_USER" -g palmweb -m 2770 /var/lib/palm-web/inbox
 
 /usr/local/libexec/palm-lapd --check
