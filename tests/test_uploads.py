@@ -139,6 +139,33 @@ class UploadTests(unittest.TestCase):
         self.assertFalse(payload.exists())
         self.assertFalse(sidecar.exists())
 
+    def test_inbox_prefers_complete_metadata_when_name_was_reused(self):
+        payload = palm_web.INBOX / "voice.wav"
+        payload.write_bytes(b"audio")
+        complete = {
+            "status": "complete",
+            "stored_name": payload.name,
+            "sender_name": "Palm",
+            "sender_address": "00:11:22:33:44:55",
+            "received_at": "2026-07-25T20:00:00+00:00",
+        }
+        removed = {
+            "status": "removed",
+            "stored_name": payload.name,
+            "sender_name": "Old attempt",
+        }
+        (palm_web.INBOX / ".transfer-complete.json").write_text(
+            json.dumps(complete), encoding="utf-8"
+        )
+        (palm_web.INBOX / ".transfer-removed.json").write_text(
+            json.dumps(removed), encoding="utf-8"
+        )
+
+        items = palm_web.inbox_files()
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["sender_name"], "Palm")
+
     def test_bluetooth_inbox_does_not_follow_symlinks(self):
         outside = palm_web.STATE_DIR / "outside.txt"
         outside.write_text("private", encoding="utf-8")

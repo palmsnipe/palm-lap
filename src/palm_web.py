@@ -67,6 +67,7 @@ def inbox_files():
     if not INBOX.is_dir() or INBOX.is_symlink():
         return []
     metadata = {}
+    incomplete_names = set()
     for sidecar in INBOX.glob(".transfer-*.json"):
         if sidecar.is_symlink():
             continue
@@ -76,11 +77,16 @@ def inbox_files():
             continue
         stored_name = os.path.basename(str(record.get("stored_name", "")))
         if stored_name:
-            metadata[stored_name] = record
+            if record.get("status") == "complete":
+                metadata[stored_name] = record
+            else:
+                incomplete_names.add(stored_name)
 
     result = []
     for path in INBOX.iterdir():
         if path.name.startswith(".") or not path.is_file() or path.is_symlink():
+            continue
+        if path.name in incomplete_names and path.name not in metadata:
             continue
         record = metadata.get(path.name, {})
         if record and record.get("status") != "complete":

@@ -6,6 +6,8 @@
   agent-selected path outside its root even when Unix permissions allow it.
 - Added a narrowly authorized compatibility helper that repairs BlueZ 5.82's
   missed OPP/FTP profile registration after an `obexd` restart.
+- Kept a completed retry visible in the web inbox when an earlier failed
+  attempt used the same filename.
 
 ## 0.7.0 — 2026-07-25
 
