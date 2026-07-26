@@ -35,6 +35,7 @@ class UploadTests(unittest.TestCase):
         root = Path(self.temporary.name)
         palm_web.STATE_DIR = root / "state"
         palm_web.STORE = palm_web.STATE_DIR / "files"
+        palm_web.INBOX = palm_web.STATE_DIR / "inbox"
         palm_web.JOBS_FILE = palm_web.STATE_DIR / "jobs.json"
         palm_web.CONFIG_PATH = root / "web.json"
         palm_web.CONFIG_PATH.write_text(json.dumps({
@@ -45,6 +46,7 @@ class UploadTests(unittest.TestCase):
             "max_upload_files": 2,
         }), encoding="utf-8")
         self.app = palm_web.create_app()
+        palm_web.INBOX.mkdir()
         self.app.testing = True
         self.client = self.app.test_client()
 
@@ -106,6 +108,46 @@ class UploadTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(list(palm_web.STORE.iterdir()), [])
+
+    def test_bluetooth_inbox_is_separate_downloadable_and_deletable(self):
+        payload = palm_web.INBOX / "Received.prc"
+        payload.write_bytes(palm_database("Received"))
+        sidecar = palm_web.INBOX / ".transfer-test.json"
+        sidecar.write_text(json.dumps({
+            "id": "test",
+            "status": "complete",
+            "stored_name": payload.name,
+            "original_name": payload.name,
+            "sender_address": "00:11:22:33:44:55",
+            "sender_name": "Test Palm",
+            "received_at": "2026-07-25T12:00:00+00:00",
+            "duration_seconds": 1.25,
+        }), encoding="utf-8")
+
+        portal = self.client.get("/")
+        download = self.client.get("/admin/inbox/files/Received.prc")
+        download_status = download.status_code
+        download.close()
+        deleted = self.client.post("/admin/inbox/delete", data={
+            "csrf": palm_web.csrf_token,
+            "filename": "Received.prc",
+        })
+
+        self.assertNotIn(b"Received.prc", portal.data)
+        self.assertEqual(download_status, 200)
+        self.assertEqual(deleted.status_code, 302)
+        self.assertFalse(payload.exists())
+        self.assertFalse(sidecar.exists())
+
+    def test_bluetooth_inbox_does_not_follow_symlinks(self):
+        outside = palm_web.STATE_DIR / "outside.txt"
+        outside.write_text("private", encoding="utf-8")
+        (palm_web.INBOX / "link.txt").symlink_to(outside)
+
+        response = self.client.get("/admin/inbox/files/link.txt")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(palm_web.inbox_files(), [])
 
 
 if __name__ == "__main__":

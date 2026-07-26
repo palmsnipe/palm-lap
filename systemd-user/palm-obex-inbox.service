@@ -1,0 +1,21 @@
+[Unit]
+Description=Palm LAP Bluetooth Object Push inbox
+Documentation=file:/usr/local/share/doc/palm-lap/WEB-INTERFACE.md
+Requires=obex.service
+After=obex.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/palm-obex-inbox --inbox /var/lib/palm-web/inbox --max-bytes 67108864
+Restart=always
+RestartSec=3s
+UMask=0007
+
+NoNewPrivileges=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=default.target

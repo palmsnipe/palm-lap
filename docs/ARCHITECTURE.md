@@ -20,6 +20,9 @@ nftables filter + masquerade -> eth0 -> 192.168.1.0/24 / Internet
 Palm WebPro -> 10.77.0.1:53 dnsmasq -> 192.168.1.1 DNS
 Palm WebPro -> 10.77.0.1:8080 palm-web -> managed PRC/PDB store
 Mac browser -> 192.168.1.50:8080/admin -> auth/CSRF -> validated helper
+
+Paired/trusted Bluetooth device -> OBEX Object Push -> BlueZ obexd
+  -> org.bluez.obex.Agent1 -> separate audited Bluetooth inbox
 ```
 
 The withdrawn protocol stops at the RFCOMM/PPP boundary. BlueZ, D-Bus, Python 3, pppd, kernel PPP, nftables, and systemd are current Debian 13 components.
@@ -134,6 +137,17 @@ existing pairing/device tools. Bluetooth sends are constrained to the managed
 store and executed as `operator` to reach that account's BlueZ OBEX user bus. One
 worker serializes transfers. See `WEB-INTERFACE.md` for the complete threat
 boundary and operations.
+
+Incoming Object Push uses the operator's current BlueZ `obexd` user service and
+the repository's `palm-obex-inbox` Agent1 implementation. On authorization, the
+agent reads `Transfer1.Session`, then uses `Session1.Destination` to identify the
+remote address. It accepts only devices whose system-bus `Device1` properties
+are paired and trusted. It chooses a collision-safe path in the dedicated inbox,
+records a metadata sidecar, and watches `Transfer1.Status` until completion.
+Completed files are mode `0640`; the setgid inbox is owned by
+`operator:palmweb`, allowing the receiver to create payloads and the LAN-only
+web service to read or delete them. The directory is not part of the public Palm
+catalog or outbound-send allowlist.
 
 Controller recovery remains bounded. The web helper can restart known services
 and can start only the fixed `palm-bluetooth-recover.service` oneshot unit. That

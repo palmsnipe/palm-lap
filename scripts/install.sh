@@ -128,6 +128,7 @@ done
 install -d -m 0755 /usr/local/libexec /usr/local/sbin /usr/local/bin
 install -o root -g root -m 0755 "$REPO_ROOT/src/palm-lapd.py" /usr/local/libexec/palm-lapd
 install -o root -g root -m 0755 "$REPO_ROOT/src/palm_web.py" /usr/local/libexec/palm_web.py
+install -o root -g root -m 0755 "$REPO_ROOT/src/palm-obex-inbox.py" /usr/local/libexec/palm-obex-inbox
 install -o root -g root -m 0755 "$REPO_ROOT/src/palm-lap-pair.py" /usr/local/sbin/palm-lap-pair
 install -o root -g root -m 0755 "$REPO_ROOT/src/palm-lap-device.py" /usr/local/sbin/palm-lap-device
 install -o root -g root -m 0755 "$REPO_ROOT/src/palm-web-admin.py" /usr/local/sbin/palm-web-admin
@@ -193,6 +194,7 @@ if ! id palmweb >/dev/null 2>&1; then
 fi
 install -d -o palmweb -g palmweb -m 0711 /var/lib/palm-web
 install -d -o palmweb -g palmweb -m 0755 /var/lib/palm-web/files
+install -d -o "$OPERATOR_USER" -g palmweb -m 2770 /var/lib/palm-web/inbox
 chown root:palmweb /etc/palm-lap/web.json
 chmod 0640 /etc/palm-lap/web.json
 
@@ -201,6 +203,10 @@ visudo -cf /etc/sudoers.d/palm-web >/dev/null
 
 for unit in "$REPO_ROOT"/systemd/*; do
     install -o root -g root -m 0644 "$unit" "/etc/systemd/system/$(basename "$unit")"
+done
+install -d -m 0755 /etc/systemd/user
+for unit in "$REPO_ROOT"/systemd-user/*; do
+    install -o root -g root -m 0644 "$unit" "/etc/systemd/user/$(basename "$unit")"
 done
 
 sysctl --system >/dev/null
@@ -219,7 +225,11 @@ systemctl start "user@$OPERATOR_UID.service" >/dev/null 2>&1 || true
 runuser -u "$OPERATOR_USER" -- env \
     XDG_RUNTIME_DIR="/run/user/$OPERATOR_UID" \
     DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$OPERATOR_UID/bus" \
-    systemctl --user start obex.service >/dev/null 2>&1 || true
+    systemctl --user daemon-reload
+runuser -u "$OPERATOR_USER" -- env \
+    XDG_RUNTIME_DIR="/run/user/$OPERATOR_UID" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$OPERATOR_UID/bus" \
+    systemctl --user enable --now obex.service palm-obex-inbox.service
 
 systemctl daemon-reload
 systemctl enable bluetooth.service nftables.service dnsmasq.service \

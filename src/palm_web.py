@@ -12,6 +12,7 @@ import subprocess
 import threading
 import time
 import uuid
+from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from werkzeug.utils import secure_filename
 CONFIG_PATH = Path("/etc/palm-lap/web.json")
 STATE_DIR = Path("/var/lib/palm-web")
 STORE = STATE_DIR / "files"
+INBOX = STATE_DIR / "inbox"
 JOBS_FILE = STATE_DIR / "jobs.json"
 HELPER = "/usr/local/sbin/palm-web-admin"
 ALLOWED_SUFFIXES = {".prc", ".pdb"}
@@ -59,6 +61,58 @@ def managed_files():
         if path.is_file() and not path.is_symlink() and path.suffix.lower() in ALLOWED_SUFFIXES:
             result.append({"name": path.name, "size": path.stat().st_size, "header": palm_header(path)})
     return result
+
+
+def inbox_files():
+    if not INBOX.is_dir() or INBOX.is_symlink():
+        return []
+    metadata = {}
+    for sidecar in INBOX.glob(".transfer-*.json"):
+        if sidecar.is_symlink():
+            continue
+        try:
+            record = json.loads(sidecar.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        stored_name = os.path.basename(str(record.get("stored_name", "")))
+        if stored_name:
+            metadata[stored_name] = record
+
+    result = []
+    for path in INBOX.iterdir():
+        if path.name.startswith(".") or not path.is_file() or path.is_symlink():
+            continue
+        record = metadata.get(path.name, {})
+        if record and record.get("status") != "complete":
+            continue
+        item = {
+            "name": path.name,
+            "size": path.stat().st_size,
+            "original_name": record.get("original_name", path.name),
+            "sender_address": record.get("sender_address", "unknown"),
+            "sender_name": record.get("sender_name", "Unknown device"),
+            "received_at": record.get(
+                "received_at",
+                datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat(
+                    timespec="seconds"
+                ),
+            ),
+            "duration_seconds": record.get("duration_seconds"),
+        }
+        result.append(item)
+    return sorted(result, key=lambda item: item["received_at"], reverse=True)
+
+
+def remove_inbox_metadata(filename):
+    for sidecar in INBOX.glob(".transfer-*.json"):
+        if sidecar.is_symlink():
+            continue
+        try:
+            record = json.loads(sidecar.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if os.path.basename(str(record.get("stored_name", ""))) == filename:
+            sidecar.unlink(missing_ok=True)
 
 
 def format_size(size):
@@ -233,7 +287,11 @@ def create_app():
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "files": len(managed_files())}
+        return {
+            "status": "ok",
+            "files": len(managed_files()),
+            "inbox_files": len(inbox_files()),
+        }
 
     @app.get("/files/<path:filename>")
     def download(filename):
@@ -327,6 +385,18 @@ def create_app():
             f'<button type="submit">Delete</button></form></td></tr>'
             for item in managed_files()
         ) or '<tr><td colspan="3">No managed files</td></tr>'
+        inbox_rows = "".join(
+            f'<tr><td><a href="{esc(url_for("inbox_download", filename=item["name"]))}">{esc(item["name"])}</a></td>'
+            f'<td><small>Original: {esc(item["original_name"])}</small></td>'
+            f'<td>{esc(format_size(item["size"]))}</td>'
+            f'<td>{esc(item["sender_name"])}<br><small>{esc(item["sender_address"])}</small></td>'
+            f'<td>{esc(item["received_at"])}</td>'
+            f'<td>{esc(str(item["duration_seconds"]) + " s" if item["duration_seconds"] is not None else "unknown")}</td>'
+            f'<td><form method="post" action="/admin/inbox/delete">{csrf()}'
+            f'<input type="hidden" name="filename" value="{esc(item["name"])}">'
+            f'<button type="submit">Delete</button></form></td></tr>'
+            for item in inbox_files()
+        ) or '<tr><td colspan="7">No files received by Bluetooth</td></tr>'
         message = request.args.get("message", "")
         message_block = f'<p class="ok">{esc(message)}</p>' if message else ""
         body = f"""{message_block}{controller_summary}{status_block}
@@ -349,6 +419,9 @@ Use when the controller shows powered no, HCI DOWN, or hardware timeout errors.<
 <button type="submit">Upload selected files</button> Up to {max_upload_files} files per batch.
 <small>The picker intentionally shows every file for iPhone/iPad compatibility; the server accepts only valid .prc and .pdb files.</small></form></fieldset>
 <h2>Managed files</h2><table><tr><th>File</th><th>Size</th><th>Action</th></tr>{file_rows}</table>
+<h2>Bluetooth inbox</h2>
+<p>Files received from paired and trusted Bluetooth devices are kept separately and are not published in the Palm catalog.</p>
+<table><tr><th>Stored file</th><th>Remote name</th><th>Size</th><th>From</th><th>Received (UTC)</th><th>Duration</th><th>Action</th></tr>{inbox_rows}</table>
 <fieldset><legend>Send by Bluetooth</legend><p class="warn">The Palm must be awake and discoverable. Sending disconnects its LAP session.</p>
 <form method="post" action="/admin/send">{csrf()}<label>Device <select name="mac" required>{device_options}</select></label>
 <label>File <select name="filename" required>{file_options}</select></label><button type="submit">Send</button></form></fieldset>
@@ -452,6 +525,44 @@ Use when the controller shows powered no, HCI DOWN, or hardware timeout errors.<
             abort(400, "unsupported file type")
         path.unlink()
         return redirect(url_for("admin", message=f"Deleted {filename}"))
+
+    @app.get("/admin/inbox/files/<path:filename>")
+    @admin_required
+    def inbox_download(filename):
+        name = os.path.basename(filename)
+        candidate = INBOX / name
+        if candidate.is_symlink():
+            abort(404)
+        path = candidate.resolve()
+        if (
+            path.parent != INBOX.resolve()
+            or name.startswith(".")
+            or not path.is_file()
+        ):
+            abort(404)
+        return send_file(
+            path, mimetype="application/octet-stream", as_attachment=True,
+            download_name=path.name, conditional=True,
+        )
+
+    @app.post("/admin/inbox/delete")
+    @admin_required
+    def inbox_delete():
+        require_csrf()
+        filename = os.path.basename(request.form.get("filename", ""))
+        candidate = INBOX / filename
+        if candidate.is_symlink():
+            abort(404)
+        path = candidate.resolve()
+        if (
+            path.parent != INBOX.resolve()
+            or filename.startswith(".")
+            or not path.is_file()
+        ):
+            abort(404)
+        path.unlink()
+        remove_inbox_metadata(filename)
+        return redirect(url_for("admin", message=f"Deleted inbox file {filename}"))
 
     @app.get("/admin/jobs/<job_id>")
     @admin_required

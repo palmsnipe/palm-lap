@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.7.0 — 2026-07-25
+
+- Added a current BlueZ OBEX Agent receiver for incoming Bluetooth Object Push
+  transfers from paired and trusted devices.
+- Added a separate 64 MiB-per-file Bluetooth inbox that is never exposed in the
+  Palm catalog or outbound managed-file selector.
+- Recorded original and collision-safe stored filenames, sender name/address,
+  transfer start/completion timestamps, duration, and actual/expected sizes in
+  per-transfer metadata sidecars.
+- Added LAN-admin download/delete controls and inbox/service health visibility.
+- Added a hardened persistent user service, installation/update/uninstall/
+  verification support, interrupted-transfer cleanup, tests, and documentation.
+
 ## 0.6.1 — 2026-07-24
 
 - Removed the browser-side file-extension filter that could prevent iOS Safari

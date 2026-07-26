@@ -129,6 +129,22 @@ def controller_status():
     for service in ("bluetooth", "palm-lap", "dnsmasq", "nftables"):
         result = probe(["systemctl", "is-active", service])
         services[service] = result.stdout.strip() or "unknown"
+    try:
+        web_config = json.loads(WEB_CONFIG.read_text(encoding="utf-8"))
+        operator = str(web_config["operator_user"])
+        operator_record = pwd.getpwnam(operator)
+        user_environment = [
+            f"XDG_RUNTIME_DIR=/run/user/{operator_record.pw_uid}",
+            f"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{operator_record.pw_uid}/bus",
+        ]
+        for service in ("obex", "palm-obex-inbox"):
+            result = probe([
+                "runuser", "-u", operator, "--", "env", *user_environment,
+                "systemctl", "--user", "is-active", f"{service}.service",
+            ])
+            services[f"{service} (user)"] = result.stdout.strip() or "unknown"
+    except (KeyError, OSError, json.JSONDecodeError):
+        services["palm-obex-inbox (user)"] = "unavailable"
 
     kernel = probe(["journalctl", "-k", "-b", "-n", "250", "--no-pager", "-o", "short-iso"])
     fault_terms = ("hardware error", "Opcode 0x0c03 failed", "hci0: command", "hci0: Opcode")

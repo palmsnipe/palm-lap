@@ -11,6 +11,8 @@ Bluetooth adapter into a Palm OS 5 LAN Access Profile gateway. It provides:
 - a legacy-PIN pairing window that is closed by default;
 - a LAN-only web interface for pairing, authorization, multi-file drag/drop
   uploads, PRC/PDB downloads, OBEX sends, diagnostics, and Bluetooth recovery;
+- a separate Bluetooth Object Push inbox with sender, receive time, duration,
+  size, and original filename metadata;
 - Raspberry Pi Zero 2 W UART recovery for the observed BCM HCI timeout.
 
 The implementation was physically validated with Palm OS 5 devices including
@@ -91,7 +93,8 @@ See [Architecture](docs/ARCHITECTURE.md), [Operations](docs/OPERATIONS.md),
 
 ```text
 src/       gateway, pairing, web, OBEX, and recovery programs
-systemd/   persistent and recovery units
+systemd/   persistent and recovery system units
+systemd-user/ operator-session OBEX receiver unit
 config/    BlueZ, PPP, dnsmasq, nftables, sysctl, sudoers, and JSON examples
 scripts/   installer, verification, and uninstall workflows
 docs/      architecture, operations, troubleshooting, and implementation history

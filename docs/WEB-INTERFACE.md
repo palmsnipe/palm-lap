@@ -51,6 +51,47 @@ available. The job page refreshes every three seconds and shows the exact
 Job history survives web-service restarts; an in-flight job is marked
 `interrupted` if the service itself restarts.
 
+## Receiving files by Bluetooth
+
+The operator's persistent `palm-obex-inbox.service` registers a BlueZ
+`org.bluez.obex.Agent1`. This is the maintained authorization interface for
+incoming Object Push; no deprecated OBEX utility is used. To send from a Palm,
+use its **Send**, **Beam**, or Bluetooth file-transfer command and choose the
+gateway. Disconnect LAP first if that Palm cannot open Object Push while its
+network session is active.
+
+Incoming transfers are accepted only when BlueZ reports the sender as both
+paired and trusted. The default per-file limit is 64 MiB. Files are written to:
+
+```text
+/var/lib/palm-web/inbox/
+```
+
+This inbox is deliberately separate from `/var/lib/palm-web/files/`. Received
+items do not appear in the Palm HTTP catalog and cannot be selected for an
+outbound Bluetooth send. The LAN-only administration page lists each completed
+item with the collision-safe stored filename, original remote filename, sender
+alias/address, completion time in UTC, duration, and byte size.
+
+Each transfer has a hidden `.transfer-ID.json` metadata sidecar. Metadata is
+written when authorization begins and updated atomically at completion. A
+receiver restart deletes an incomplete payload and marks its sidecar
+`interrupted`; completed files are retained. The web interface can download or
+delete completed inbox files. Deletion also removes the matching sidecar.
+
+Receiver operations:
+
+```sh
+systemctl --user status palm-obex-inbox.service obex.service
+journalctl --user -u palm-obex-inbox.service -f
+```
+
+BlueZ API references:
+
+- <https://manpages.debian.org/trixie/bluez/org.bluez.obex.Agent.5.en.html>
+- <https://manpages.debian.org/trixie/bluez/org.bluez.obex.Transfer.5.en.html>
+- <https://manpages.debian.org/trixie/bluez/org.bluez.obex.Session.5.en.html>
+
 The home-folder convenience path `/home/operator/palm-lap/files` is a symlink to
 the managed store. Do not replace it with an untrusted or network-mounted path.
 The state directory is mode `0711` (traversable but not listable by other
@@ -116,6 +157,9 @@ reasserts them before discovery begins.
 - Uploaded filenames are normalized, extensions are restricted to `.prc` and
   `.pdb`, symlinks are not served, file size is limited, and a Palm database
   header is required.
+- Incoming Object Push is authorized by an unprivileged agent, accepts only
+  paired/trusted senders, has a 64 MiB per-file ceiling, rejects symlinked
+  storage, and never publishes received items to Palm clients.
 - nftables permits Palm interfaces to reach only DNS, TCP 8080, and diagnostic
   ICMP on the Pi. The privileged admin routes add a second application-layer
   LAN-source check.
@@ -133,6 +177,7 @@ Files:
 
 ```text
 /usr/local/libexec/palm_web.py
+/usr/local/libexec/palm-obex-inbox
 /usr/local/sbin/palm-web-admin
 /usr/local/sbin/palm-bluetooth-recover
 /etc/palm-lap/web.json
@@ -140,7 +185,9 @@ Files:
 /etc/systemd/system/palm-bluetooth-recover.service
 /etc/sudoers.d/palm-web
 /var/lib/palm-web/files/
+/var/lib/palm-web/inbox/
 /var/lib/palm-web/jobs.json
+/etc/systemd/user/palm-obex-inbox.service
 ```
 
 Editable source is the cloned `palm-lap` repository. Installed runtime files

@@ -37,6 +37,7 @@ Palm-facing DNS forwarder; its DHCP functions are disabled.
 /usr/local/sbin/palm-lap-device
 /usr/local/bin/palm-send-prc
 /usr/local/libexec/palm_web.py
+/usr/local/libexec/palm-obex-inbox
 /usr/local/sbin/palm-web-admin
 /usr/local/sbin/palm-bluetooth-recover
 /usr/local/sbin/palm-lap-controller-compat
@@ -46,6 +47,7 @@ Palm-facing DNS forwarder; its DHCP functions are disabled.
 /etc/systemd/system/palm-web.service
 /etc/systemd/system/palm-bluetooth-recover.service
 /etc/systemd/system/palm-lap-compat.service
+/etc/systemd/user/palm-obex-inbox.service
 /etc/sudoers.d/palm-web
 /etc/bluetooth/main.conf
 /etc/ppp/peers/palm-lap
@@ -65,6 +67,9 @@ passwordless by user choice and restricted by client network plus CSRF.
 The state directory is `0711` (not listable by other accounts); its public-file
 child is `0755` with individual managed files `0644`, permitting the validated
 OBEX sender path running as `operator` to read known files. Job state remains `0640`.
+The separate Bluetooth inbox is a setgid `operator:palmweb` directory at
+`/var/lib/palm-web/inbox`; completed payloads are `0640` and transfer metadata
+is stored in hidden `0660` JSON sidecars.
 
 ## Home-folder project
 
@@ -98,6 +103,9 @@ policy but no credential or password hash.
 - Replaced the original minimal `/etc/nftables.conf` with an equivalent base table plus `/etc/nftables.d/*.nft` include.
 - Set BlueZ major/minor device class to LAN/Network Access Point (`0x000300`) in `/etc/bluetooth/main.conf`; pairing adds the missing Networking service hint for LAP dynamically.
 - Enabled and started the per-user `obex.service` for modern Bluetooth Object Push.
+- Installed and enabled the per-user `palm-obex-inbox.service`, with its
+  `/usr/local/libexec/palm-obex-inbox` Agent1 receiver and separate
+  `operator:palmweb` setgid inbox at `/var/lib/palm-web/inbox`.
 - Enabled and started `dnsmasq.service` as DNS-only forwarding on loopback and
   dynamic `plap*` interfaces; IPCP advertises `10.77.0.1` as DNS.
 - Created `palmweb`, enabled `palm-web.service`, and installed its single-command
@@ -135,6 +143,7 @@ The following returns this host to its observed pre-install networking behavior.
 
 ```sh
 sudo palm-lap-pair close
+systemctl --user disable --now palm-obex-inbox.service
 sudo systemctl disable --now palm-web.service
 sudo systemctl disable --now palm-lap.service
 sudo systemctl disable --now dnsmasq.service
@@ -145,6 +154,7 @@ sudo rm -f /etc/systemd/system/palm-lap-pairing-close.timer
 sudo rm -f /etc/systemd/system/palm-web.service
 sudo rm -f /etc/systemd/system/palm-bluetooth-recover.service
 sudo rm -f /etc/systemd/system/palm-lap-compat.service
+sudo rm -f /etc/systemd/user/palm-obex-inbox.service
 sudo rm -f /etc/sudoers.d/palm-web
 sudo rm -f /usr/local/libexec/palm-lapd
 sudo rm -f /usr/local/sbin/palm-lap-pair
@@ -153,6 +163,7 @@ sudo rm -f /usr/local/sbin/palm-web-admin
 sudo rm -f /usr/local/sbin/palm-bluetooth-recover
 sudo rm -f /usr/local/sbin/palm-lap-controller-compat
 sudo rm -f /usr/local/libexec/palm_web.py
+sudo rm -f /usr/local/libexec/palm-obex-inbox
 sudo rm -f /usr/local/bin/palm-send-prc
 sudo rm -rf /etc/palm-lap
 sudo rm -f /etc/dnsmasq.d/palm-lap.conf
